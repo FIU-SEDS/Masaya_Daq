@@ -32,6 +32,12 @@ void loop() {
 
   int16_t ch1_raw_value = adc.readADC_SingleEnded(1); 
   float ch1_volts = adc.computeVolts(ch1_raw_value);
+
+  int16_t ch2_raw_value = adc.readADC_SingleEnded(2); 
+  float ch2_volts = adc.computeVolts(ch1_raw_value);
+
+  int16_t ch3_raw_value = adc.readADC_SingleEnded(3); 
+  float ch3_volts = adc.computeVolts(ch1_raw_value);
   
   // Serial.print("Channel 0 Raw: ");
   Serial.print(ch0_raw_value); 
@@ -44,6 +50,19 @@ void loop() {
   Serial.print(ch1_raw_value); 
   Serial.print(",");
   Serial.println(ch1_volts, 3); 
+
+    // Serial.print("Channel 0 Raw: ");
+  Serial.print(ch2_raw_value); 
+  Serial.print(",");
+  Serial.print(ch2_volts, 3); // Tells it to print 3 decimal places
+
+  Serial.print(",");
+
+  // Serial.print("  |  Channel 1 Raw: ");
+  Serial.print(ch3_raw_value); 
+  Serial.print(",");
+  Serial.println(ch3_volts, 3); 
+  
   
   delay(2);
 }
