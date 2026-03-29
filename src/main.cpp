@@ -1,68 +1,78 @@
-#include <Wire.h>
-#include <Adafruit_ADS1X15.h>
+/**
+ *
+ * HX711 library for Arduino - example file
+ * https://github.com/bogde/HX711
+ *
+ * MIT License
+ * (c) 2018 Bogdan Necula
+ *
+**/
+#include "HX711.h"
 
-Adafruit_ADS1115 adc;
+
+// HX711 circuit wiring
+const int LOADCELL_DOUT_PIN = PB7;
+const int LOADCELL_SCK_PIN = PB6;
+
+
+HX711 scale;
 
 void setup() {
-  Serial.begin(115200);
-  
-  delay(2000); 
-  
-  Serial.println("STM32 Booting up...");
+  Serial.begin(38400);
+  Serial.println("HX711 Demo");
 
-  // EXPLICITLY DEFINE THE I2C PINS HERE
-  Wire.setSCL(PB6);
-  Wire.setSDA(PB7);
-  Wire.begin(); // Start the I2C bus on those specific pins
+  Serial.println("Initializing the scale");
 
-  Serial.println("I2C Pins Set. Looking for ADS1115...");
+  // Initialize library with data output pin, clock input pin and gain factor.
+  // Channel selection is made by passing the appropriate gain:
+  // - With a gain factor of 64 or 128, channel A is selected
+  // - With a gain factor of 32, channel B is selected
+  // By omitting the gain factor parameter, the library
+  // default "128" (Channel A) is used here.
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
 
-  // Initialize the ADC and pass the explicit Wire object just to be safe
-  if (!adc.begin(0x48, &Wire)) {
-    Serial.println("ERROR: Failed to find ADS1115. Check wiring!");
-    while (1); // Freeze here if board isn't found
-  }
+  Serial.println("Before setting up the scale:");
+  Serial.print("read: \t\t");
+  Serial.println(scale.read());			// print a raw reading from the ADC
 
-  Serial.println("ADS1115 Found! Starting reads...");
+  Serial.print("read average: \t\t");
+  Serial.println(scale.read_average(20));  	// print the average of 20 readings from the ADC
+
+  Serial.print("get value: \t\t");
+  Serial.println(scale.get_value(5));		// print the average of 5 readings from the ADC minus the tare weight (not set yet)
+
+  Serial.print("get units: \t\t");
+  Serial.println(scale.get_units(5), 1);	// print the average of 5 readings from the ADC minus tare weight (not set) divided
+						// by the SCALE parameter (not set yet)
+
+  scale.set_scale(-925.74);                      // this value is obtained by calibrating the scale with known weights; see the README for details
+  scale.tare();				        // reset the scale to 0
+
+  Serial.println("After setting up the scale:");
+
+  Serial.print("read: \t\t");
+  Serial.println(scale.read());                 // print a raw reading from the ADC
+
+  Serial.print("read average: \t\t");
+  Serial.println(scale.read_average(20));       // print the average of 20 readings from the ADC
+
+  Serial.print("get value: \t\t");
+  Serial.println(scale.get_value(5));		// print the average of 5 readings from the ADC minus the tare weight, set with tare()
+
+  Serial.print("get units: \t\t");
+  Serial.println(scale.get_units(5), 1);        // print the average of 5 readings from the ADC minus tare weight, divided
+						// by the SCALE parameter set with set_scale
+
+  Serial.println("Readings:");
 }
 
 void loop() {
-  int16_t ch0_raw_value = adc.readADC_SingleEnded(0); 
-  float ch0_volts = adc.computeVolts(ch0_raw_value); // Converts the raw number to Volts
+  Serial.print("one reading:\t");
+  Serial.print(scale.get_units()*20, 1);
+  Serial.print("\t| average:\t");
+  Serial.println(scale.get_units(10)*20, 1);
 
-  int16_t ch1_raw_value = adc.readADC_SingleEnded(1); 
-  float ch1_volts = adc.computeVolts(ch1_raw_value);
-
-  int16_t ch2_raw_value = adc.readADC_SingleEnded(2); 
-  float ch2_volts = adc.computeVolts(ch1_raw_value);
-
-  int16_t ch3_raw_value = adc.readADC_SingleEnded(3); 
-  float ch3_volts = adc.computeVolts(ch1_raw_value);
-  
-  // Serial.print("Channel 0 Raw: ");
-  Serial.print(ch0_raw_value); 
-  Serial.print(",");
-  Serial.print(ch0_volts, 3); // Tells it to print 3 decimal places
-
-  Serial.print(",");
-
-  // Serial.print("  |  Channel 1 Raw: ");
-  Serial.print(ch1_raw_value); 
-  Serial.print(",");
-  Serial.println(ch1_volts, 3); 
-
-    // Serial.print("Channel 0 Raw: ");
-  Serial.print(ch2_raw_value); 
-  Serial.print(",");
-  Serial.print(ch2_volts, 3); // Tells it to print 3 decimal places
-
-  Serial.print(",");
-
-  // Serial.print("  |  Channel 1 Raw: ");
-  Serial.print(ch3_raw_value); 
-  Serial.print(",");
-  Serial.println(ch3_volts, 3); 
-  
-  
-  delay(2);
+  scale.power_down();			        // put the ADC in sleep mode
+  delay(100);
+  scale.power_up();
 }
