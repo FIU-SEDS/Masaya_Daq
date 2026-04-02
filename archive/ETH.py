@@ -1,17 +1,33 @@
 import socket
+import time
 
-# BIND EXPLICITLY to the Ethernet Adapter IP
-UDP_IP = "192.168.1.100" 
-UDP_PORT = 5005
+UDP_IP_REMOTE = "192.168.1.200"  # CH9121 module IP
+UDP_PORT_SEND = 2000             # CH9121 local port (it listens here)
+UDP_PORT_RECV = 5005             # Your PC port (replies come back here)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-try:
-    sock.bind((UDP_IP, UDP_PORT))
-    print(f"Listening on {UDP_IP}:{UDP_PORT}")
-except OSError as e:
-    print(f"Error binding to IP: {e}")
-    print("Check that your Ethernet adapter is actually assigned this IP!")
+sock.bind(("", UDP_PORT_RECV))   # Bind to receive replies on port 5005
+sock.settimeout(1.0)
 
 while True:
-    data, addr = sock.recvfrom(1024)
-    print(f"Received: {data.decode('utf-8', errors='ignore').strip()} from {addr}")
+    print("Sending Open...")
+    sock.sendto(b"O", (UDP_IP_REMOTE, UDP_PORT_SEND))
+
+    try:
+        data, addr = sock.recvfrom(1024)
+        print(f"Response: {data.decode()}")
+    except socket.timeout:
+        print("No response from STM32")
+
+    time.sleep(1)
+
+    print("Sending Close...")
+    sock.sendto(b"C", (UDP_IP_REMOTE, UDP_PORT_SEND))
+
+    try:
+        data, addr = sock.recvfrom(1024)
+        print(f"Response: {data.decode()}")
+    except socket.timeout:
+        print("No response from STM32")
+
+    time.sleep(1)
