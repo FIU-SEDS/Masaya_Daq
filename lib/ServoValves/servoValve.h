@@ -9,12 +9,21 @@ class servoValve {
     int _servoPin;
     Servo _servo;
 
+    int _currentDegree;
+    unsigned long _lastMoveTime;
+    bool _isOpening;
+    int _stepDelay;
+
   public:
     servoValve(int servoPin);
     void begin();
     void close();
     void open();
-    void variable(int degree);
+    void setPosition(int degree);
+    void openSlow();  
+    void openModerate();
+    void update();                       
+    bool isMoving();                     
 };
 
 #endif
