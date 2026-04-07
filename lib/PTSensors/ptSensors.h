@@ -12,7 +12,7 @@ class ptSensors {
 
   public:
     ptSensors(int SCL, int SDA);
-    void begin();
+    void begin(uint8_t addr);
     float ch_read(uint8_t chNum);
 };
 

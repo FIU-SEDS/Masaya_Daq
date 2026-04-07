@@ -5,12 +5,8 @@ ptSensors::ptSensors(int SCL, int SDA) {
     _SDA = SDA;
 }
 
-void ptSensors::begin() {
-    Wire.setSCL(_SCL);
-    Wire.setSDA(_SDA);
-    Wire.setClock(400000);
-    Wire.begin();
-    _ptSensors.begin(0x48, &Wire);
+void ptSensors::begin(uint8_t addr) {
+    _ptSensors.begin(addr, &Wire);  
     _ptSensors.setDataRate(RATE_ADS1115_860SPS);
 }
 
