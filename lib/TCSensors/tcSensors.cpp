@@ -5,12 +5,8 @@ tcSensors::tcSensors(int SCL, int SDA) {
     _SDA = SDA;
 }
 
-void tcSensors::begin() {
-    Wire.setSCL(_SCL);
-    Wire.setSDA(_SDA);
-    Wire.setClock(400000);
-    Wire.begin();
-    _tcSensors.begin(0x48, &Wire);
+void tcSensors::begin(uint8_t addr) {
+    _tcSensors.begin(addr, &Wire);
     _tcSensors.setDataRate(RATE_ADS1115_860SPS);
 }
 
