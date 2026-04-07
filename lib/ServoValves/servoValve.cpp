@@ -23,11 +23,6 @@ void servoValve::open() {
     _servo.write(180);
 }
 
-void servoValve::setPosition(int degree) {
-    _isOpening = false;
-    _servo.write(degree);
-}
-
 void servoValve::openModerate() {
     _currentDegree = 0;
     _stepDelay = 3;

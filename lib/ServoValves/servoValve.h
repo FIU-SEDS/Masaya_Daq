@@ -19,7 +19,6 @@ class servoValve {
     void begin();
     void close();
     void open();
-    void setPosition(int degree);
     void openSlow();  
     void openModerate();
     void update();                       
