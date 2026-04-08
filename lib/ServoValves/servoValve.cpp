@@ -20,7 +20,7 @@ void servoValve::close() {
 
 void servoValve::open() {
     _isOpening = false;
-    _servo.write(180);
+    _servo.write(90);
 }
 
 void servoValve::openModerate() {
@@ -45,7 +45,7 @@ void servoValve::update() {
         _servo.write(_currentDegree);
         _currentDegree++;
 
-        if (_currentDegree > 180) {
+        if (_currentDegree > 90) {
             _isOpening = false;
         }
     }
