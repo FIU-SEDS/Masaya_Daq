@@ -7,7 +7,7 @@ solenoid::solenoid(int pin) {
 void solenoid::begin() {
     pinMode(_pin, OUTPUT);
 
-    digitalWrite(_pin, HIGH); //Start Closed
+    digitalWrite(_pin, LOW); //Start Closed
 }
 
 void solenoid::close(){
