@@ -14,8 +14,8 @@ HardwareSerial CommSerial(PA10, PA9);
 // --- Device IDs ---
 #define NUM_SERVOS      4
 #define NUM_SOLENOIDS   2
-// Servo IDs:   0–4
-// Solenoid IDs: 5–6
+// Servo IDs:   0–3
+// Solenoid IDs: 4–5
 
 // --- Commands ---
 #define CMD_OPEN_FAST   0x01
@@ -34,11 +34,14 @@ HardwareSerial CommSerial(PA10, PA9);
 #define NUM_SENSORS     (NUM_PT + NUM_TC + NUM_LC)  // 13
 #define TELEM_LEN       (1 + NUM_SENSORS * 2 + 1)  // 28 bytes
 
+// --- Blink Pin ---
+#define LED_PIN PD13
+
 // --- Servos ---
 servoValve servos[NUM_SERVOS] = {
     servoValve(PA5),
     servoValve(PA1),
-    servoValve(PA2),
+    servoValve(PA4),
     servoValve(PA3)
 };
 
@@ -49,21 +52,20 @@ solenoid solenoids[NUM_SOLENOIDS] = {
 };
 
 // --- Sensors ---
-// PT: ADS1115 at 0x48 (4ch) and 0x49 (4ch)
-// TC: ADS1115 at 0x4A (3ch used)
-// Note: Wire.begin() called once in setup(); libs must not call it again
-ptSensors pts_a(PC10, PC11);  // 0x48 - PTs 0-3
-ptSensors pts_b(PC10, PC11);  // 0x49 - PTs 4-7
-tcSensors tcs(PC10, PC11);    // 0x4A - TCs 0-2
-loadCell lc0(PC4, PB1);
-loadCell lc1(PB0, PB1);
+ptSensors pts_a(PB6, PB7);  // 0x48 - PTs 0-3
+ptSensors pts_b(PB6, PB7);  // 0x4A - PTs 4-7
+tcSensors tcs(PB6, PB7);    // 0x4B - TCs 0-2
+loadCell lc0(PC4, PC5);
+loadCell lc1(PB0, PC5);
 
 // --- RX Buffer ---
 uint8_t rxBuf[FRAME_LEN];
 uint8_t rxIdx = 0;
 
-// --- Telemetry timer ---
+// --- Timers ---
 uint32_t lastTelemTime = 0;
+uint32_t lastBlinkTime = 0;
+bool ledState = false;
 
 // -------------------------------------------------------
 
@@ -80,7 +82,7 @@ bool processFrame(uint8_t *frame) {
     uint8_t id  = frame[0];
     uint8_t cmd = frame[1];
 
-    // Servo valve (IDs 0–4)
+    // Servo valve (IDs 0–3)
     if (id < NUM_SERVOS) {
         switch (cmd) {
             case CMD_OPEN_FAST: servos[id].open();         break;
@@ -92,7 +94,7 @@ bool processFrame(uint8_t *frame) {
         return true;
     }
 
-    // Solenoid (IDs 5–6)
+    // Solenoid (IDs 4–5)
     uint8_t solId = id - NUM_SERVOS;
     if (solId < NUM_SOLENOIDS) {
         switch (cmd) {
@@ -121,10 +123,11 @@ void sendTelemetry() {
 
     // PTs (8 channels)
     for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_a.ch_read(ch));
-    for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_b.ch_read(ch));
+    for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(0.0); // NOT READING PTS_B BECAUSE DOESNT WORK WITH IT.
 
     // TCs (3 channels)
     for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(tcs.ch_read(ch));
+
 
     // Load cells (2)
     encodeFloat(lc0.lc_read());
@@ -137,19 +140,22 @@ void sendTelemetry() {
 }
 
 void setup() {
-    CommSerial.begin(921600);
+    // Set to 115200 to match your CH9121 settings
+    CommSerial.begin(115200);
+    
+    // Set up the blink LED pin
+    pinMode(LED_PIN, OUTPUT);
 
     // I2C bus — init once for all ADS1115 devices
-    Wire.setSCL(PC10);
-    Wire.setSDA(PC11);
+    Wire.setSCL(PB6);
+    Wire.setSDA(PB7);
     Wire.setClock(400000);
     Wire.begin();
 
-    // Sensors — pass address explicitly (your libs will need a minor tweak
-    // to accept address in begin() rather than calling Wire.begin() themselves)
+    // Sensors — pass address explicitly
     pts_a.begin(0x48);
-    pts_b.begin(0x49);
-    tcs.begin(0x4A);
+    pts_b.begin(0x4A);
+    tcs.begin(0x4B);
 
     lc0.begin();
     lc1.begin();
@@ -160,7 +166,7 @@ void setup() {
 }
 
 void loop() {
-    // Update servo positions (required for openModerate/openSlow stepping)
+    // Update servo positions
     for (auto &s : servos) s.update();
 
     // Non-blocking serial receive
@@ -176,5 +182,12 @@ void loop() {
     if (millis() - lastTelemTime >= TELEM_INTERVAL_MS) {
         lastTelemTime = millis();
         sendTelemetry();
+    }
+    
+    // Periodic LED Blink (every 500 milliseconds)
+    if (millis() - lastBlinkTime >= 500) {
+        lastBlinkTime = millis();
+        ledState = !ledState; // Flip between true and false
+        digitalWrite(LED_PIN, ledState);
     }
 }
