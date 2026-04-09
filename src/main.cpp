@@ -48,7 +48,7 @@ servoValve servos[NUM_SERVOS] = {
 // --- Solenoids ---
 solenoid solenoids[NUM_SOLENOIDS] = {
     solenoid(PC6),
-    solenoid(PC8),
+    solenoid(PD7),
 };
 
 // --- Sensors ---
@@ -122,11 +122,16 @@ void sendTelemetry() {
     };
 
     // PTs (8 channels)
-    for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_a.ch_read(ch));
-    for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(0.0); // NOT READING PTS_B BECAUSE DOESNT WORK WITH IT.
+    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_a.ch_read(ch));
+    for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(0.0); 
+    
+    for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_b.ch_read(ch));
+    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(0.0); // NOT READING PTS_B BECAUSE DOESNT WORK WITH IT.
 
     // TCs (3 channels)
     for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(tcs.ch_read(ch));
+    // for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(0.0); // NOT READING PTS_B BECAUSE DOESNT WORK WITH IT.
+
 
 
     // Load cells (2)
@@ -154,8 +159,8 @@ void setup() {
 
     // Sensors — pass address explicitly
     pts_a.begin(0x48);
-    pts_b.begin(0x4A);
-    tcs.begin(0x4B);
+    pts_b.begin(0x4A); // WORKS SDA
+    tcs.begin(0x4B); // WORKS SCL
 
     lc0.begin();
     lc1.begin();
