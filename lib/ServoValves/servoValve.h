@@ -11,7 +11,7 @@ class servoValve {
 
     int _currentDegree;
     unsigned long _lastMoveTime;
-    bool _isOpening;
+    bool _isMoving;
     int _stepDelay;
 
   public:
@@ -19,8 +19,8 @@ class servoValve {
     void begin();
     void close();
     void open();
-    void openSlow();  
-    void openModerate();
+    void closeSlow();  
+    void closeModerate();
     void update();                       
     bool isMoving();                     
 };
