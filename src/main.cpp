@@ -18,9 +18,9 @@ HardwareSerial CommSerial(PA10, PA9);
 // Solenoid IDs: 4–5
 
 // --- Commands ---
-#define CMD_OPEN_FAST   0x01
-#define CMD_OPEN_MOD    0x02
-#define CMD_OPEN_SLOW   0x03
+#define CMD_OPEN        0x01
+#define CMD_CLOSE_MOD   0x02
+#define CMD_CLOSE_SLOW  0x03
 #define CMD_CLOSE       0x04
 
 // --- Telemetry ---
@@ -85,10 +85,10 @@ bool processFrame(uint8_t *frame) {
     // Servo valve (IDs 0–3)
     if (id < NUM_SERVOS) {
         switch (cmd) {
-            case CMD_OPEN_FAST: servos[id].open();         break;
-            case CMD_OPEN_MOD:  servos[id].openModerate(); break;
-            case CMD_OPEN_SLOW: servos[id].openSlow();     break;
-            case CMD_CLOSE:     servos[id].close();        break;
+            case CMD_OPEN:       servos[id].open();          break;
+            case CMD_CLOSE_MOD:  servos[id].closeModerate(); break;
+            case CMD_CLOSE_SLOW: servos[id].closeSlow();     break;
+            case CMD_CLOSE:      servos[id].close();         break;
             default: return false;
         }
         return true;
@@ -98,8 +98,8 @@ bool processFrame(uint8_t *frame) {
     uint8_t solId = id - NUM_SERVOS;
     if (solId < NUM_SOLENOIDS) {
         switch (cmd) {
-            case CMD_OPEN_FAST: solenoids[solId].open();  break;
-            case CMD_CLOSE:     solenoids[solId].close(); break;
+            case CMD_OPEN:  solenoids[solId].open();  break;
+            case CMD_CLOSE: solenoids[solId].close(); break;
             default: return false;  // MOD/SLOW invalid for solenoids
         }
         return true;
@@ -131,8 +131,6 @@ void sendTelemetry() {
     // TCs (3 channels)
     for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(tcs.ch_read(ch));
     // for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(0.0); // NOT READING PTS_B BECAUSE DOESNT WORK WITH IT.
-
-
 
     // Load cells (2)
     encodeFloat(lc0.lc_read());
