@@ -122,15 +122,15 @@ void sendTelemetry() {
     };
 
     // PTs (8 channels)
-    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_a.ch_read(ch));
-    for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(0.0); 
+    for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_a.ch_read(ch));
+    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(0.0); // TEST CODE LINES WHEN NOT USING THE ADCS
     
     for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_b.ch_read(ch));
-    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(0.0); // NOT READING PTS_B BECAUSE DOESNT WORK WITH IT.
+    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(0.0);
 
     // TCs (3 channels)
     for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(tcs.ch_read(ch));
-    // for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(0.0); // NOT READING PTS_B BECAUSE DOESNT WORK WITH IT.
+    // for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(0.0);
 
     // Load cells (2)
     encodeFloat(lc0.lc_read());
