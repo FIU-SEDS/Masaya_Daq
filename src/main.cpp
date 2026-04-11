@@ -22,21 +22,24 @@ HardwareSerial CommSerial(PA10, PA9);
 #define CMD_CLOSE_MOD   0x02
 #define CMD_CLOSE_SLOW  0x03
 #define CMD_CLOSE       0x04
+#define CMD_BURP        0x05
 
 // --- Telemetry ---
 #define TELEM_INTERVAL_MS  10
 #define NUM_PT             8    // 2x ADS1115, 4ch each
 #define NUM_TC             3    // 1x ADS1115, 3ch used
 #define NUM_LC             2    // 2x HX711
-#define NUM_VALVES_TELEM   4
+#define NUM_VALVES_TELEM   6    // 4 Servos and 2 solenoids
 // TX frame: [0xFF] [13x floats as 2-byte fixed point] [CHECKSUM] = 28 bytes
 // Each sensor encoded as uint16_t (value * 10 for 1 decimal place)
 #define TELEM_HEADER    0xFF
 #define NUM_SENSORS       (NUM_PT + NUM_TC + NUM_LC + NUM_VALVES_TELEM) // 19
-#define TELEM_LEN       (1 + NUM_SENSORS * 2 + 1)  // 28 bytes
+#define TELEM_LEN         (1 + NUM_SENSORS * 2 + 1)  // 40 bytes
 
 // --- Blink Pin ---
 #define LED_PIN PD13
+
+
 
 // --- Servos ---
 servoValve servos[NUM_SERVOS] = {
@@ -66,6 +69,12 @@ uint8_t rxIdx = 0;
 // --- Timers ---
 uint32_t lastTelemTime = 0;
 uint32_t lastBlinkTime = 0;
+
+// --- Burping ---
+bool burping      = false;
+bool burpState    = false;
+uint32_t lastBurpTime = 0;
+
 bool ledState = false;
 
 // -------------------------------------------------------
@@ -105,6 +114,16 @@ bool processFrame(uint8_t *frame) {
         }
         return true;
     }
+
+    if (solId < NUM_SOLENOIDS) {
+    switch (cmd) {
+        case CMD_OPEN:  solenoids[solId].open();  break;
+        case CMD_CLOSE: solenoids[solId].close(); break;
+        case CMD_BURP:  burping = !burping;        break;  // toggle burp mode
+        default: return false;
+    }
+    return true;
+}
 
     return false;  // Unknown ID
 }
@@ -196,6 +215,25 @@ void loop() {
         lastTelemTime = millis();
         sendTelemetry();
     }
+
+    // Burp: toggle all solenoids every 100ms
+    if (burping) {
+        if (millis() - lastBurpTime >= 100) {
+            lastBurpTime = millis();
+            burpState = !burpState;
+            for (auto &s : solenoids) {
+                burpState ? s.open() : s.close();
+            }
+        }
+    } else {
+        // Make sure solenoids are closed when burping stops
+        if (burpState) {
+            burpState = false;
+            for (auto &s : solenoids) s.close();
+        }
+    }
+
+
 
     // Periodic LED blink (every 500 ms)
     if (millis() - lastBlinkTime >= 500) {
