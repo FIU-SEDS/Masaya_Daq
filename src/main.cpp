@@ -24,7 +24,7 @@ HardwareSerial CommSerial(PA10, PA9);
 #define CMD_CLOSE       0x04
 
 // --- Telemetry ---
-#define TELEM_INTERVAL_MS  50
+#define TELEM_INTERVAL_MS  10
 #define NUM_PT             8    // 2x ADS1115, 4ch each
 #define NUM_TC             3    // 1x ADS1115, 3ch used
 #define NUM_LC             2    // 2x HX711
