@@ -15,11 +15,13 @@ void servoValve::begin() {
 
 void servoValve::close() {
     _isMoving = false;
+    _currentDegree = 0;
     _servo.write(0);
 }
 
 void servoValve::open() {
     _isMoving = false;
+    _currentDegree = 90;
     _servo.write(90);
 }
 
@@ -55,4 +57,7 @@ bool servoValve::isMoving() {
     return _isMoving;
 }
 
+int servoValve::getPosition() {
+    return _currentDegree;
+}
 // Include valve.update() in main.cpp

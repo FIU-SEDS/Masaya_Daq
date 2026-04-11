@@ -22,7 +22,8 @@ class servoValve {
     void closeSlow();  
     void closeModerate();
     void update();                       
-    bool isMoving();                     
+    bool isMoving();
+    int getPosition();                     
 };
 
 #endif

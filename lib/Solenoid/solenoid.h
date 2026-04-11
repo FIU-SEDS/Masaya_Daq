@@ -6,6 +6,7 @@
 class solenoid {
   private:
     int _pin;
+    int _currentPosition;
 
   public:
     solenoid(int pin);
@@ -13,6 +14,7 @@ class solenoid {
     void begin();
     void open();
     void close();
+    int getPosition();
 };
 
 #endif

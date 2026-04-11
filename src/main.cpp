@@ -28,10 +28,11 @@ HardwareSerial CommSerial(PA10, PA9);
 #define NUM_PT             8    // 2x ADS1115, 4ch each
 #define NUM_TC             3    // 1x ADS1115, 3ch used
 #define NUM_LC             2    // 2x HX711
+#define NUM_VALVES_TELEM   4
 // TX frame: [0xFF] [13x floats as 2-byte fixed point] [CHECKSUM] = 28 bytes
 // Each sensor encoded as uint16_t (value * 10 for 1 decimal place)
 #define TELEM_HEADER    0xFF
-#define NUM_SENSORS     (NUM_PT + NUM_TC + NUM_LC)  // 13
+#define NUM_SENSORS       (NUM_PT + NUM_TC + NUM_LC + NUM_VALVES_TELEM) // 19
 #define TELEM_LEN       (1 + NUM_SENSORS * 2 + 1)  // 28 bytes
 
 // --- Blink Pin ---
@@ -131,6 +132,13 @@ void sendTelemetry() {
     // Load cells (2)
     encodeFloat(lc0.lc_read());
     encodeFloat(lc1.lc_read());
+
+
+    // Servo Position
+    for (uint8_t i = 0; i < NUM_SERVOS; i++) encodeFloat(servos[i].getPosition());
+    
+    // Solenoid Position
+    for (uint8_t i = 0; i < NUM_SOLENOIDS; i++) encodeFloat(solenoids[i].getPosition());
 
     // Checksum over everything except the last byte slot
     frame[idx] = calcChecksum(frame, idx);
