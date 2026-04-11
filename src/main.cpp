@@ -121,16 +121,12 @@ void sendTelemetry() {
         frame[idx++] = encoded & 0xFF;
     };
 
-    // PTs (8 channels)
+    // PTs (8 channels) — returns last cached value, no blocking
     for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_a.ch_read(ch));
-    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(0.0); // TEST CODE LINES WHEN NOT USING THE ADCS
-    
     for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_b.ch_read(ch));
-    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(0.0);
 
-    // TCs (3 channels)
+    // TCs (3 channels) — returns last cached value, no blocking
     for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(tcs.ch_read(ch));
-    // for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(0.0);
 
     // Load cells (2)
     encodeFloat(lc0.lc_read());
@@ -143,10 +139,8 @@ void sendTelemetry() {
 }
 
 void setup() {
-    // Set to 115200 to match your CH9121 settings
     CommSerial.begin(115200);
-    
-    // Set up the blink LED pin
+
     pinMode(LED_PIN, OUTPUT);
 
     // I2C bus — init once for all ADS1115 devices
@@ -156,9 +150,10 @@ void setup() {
     Wire.begin();
 
     // Sensors — pass address explicitly
+    // begin() now also kicks off the first non-blocking conversion
     pts_a.begin(0x48);
-    pts_b.begin(0x4A); // WORKS SDA
-    tcs.begin(0x4B); // WORKS SCL
+    pts_b.begin(0x4A);
+    tcs.begin(0x4B);
 
     lc0.begin();
     lc1.begin();
@@ -169,6 +164,13 @@ void setup() {
 }
 
 void loop() {
+    // Poll all ADCs every iteration — completely non-blocking.
+    // Each call checks if the current channel is done, stores the result,
+    // and immediately kicks off the next channel conversion.
+    pts_a.poll();
+    pts_b.poll();
+    tcs.poll();
+
     // Update servo positions
     for (auto &s : servos) s.update();
 
@@ -181,16 +183,16 @@ void loop() {
         }
     }
 
-    // Periodic telemetry
+    // Periodic telemetry — ch_read() now just returns cached values, no waiting
     if (millis() - lastTelemTime >= TELEM_INTERVAL_MS) {
         lastTelemTime = millis();
         sendTelemetry();
     }
-    
-    // Periodic LED Blink (every 500 milliseconds)
+
+    // Periodic LED blink (every 500 ms)
     if (millis() - lastBlinkTime >= 500) {
         lastBlinkTime = millis();
-        ledState = !ledState; // Flip between true and false
+        ledState = !ledState;
         digitalWrite(LED_PIN, ledState);
     }
 }
