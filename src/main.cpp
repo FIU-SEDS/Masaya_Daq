@@ -188,8 +188,8 @@ void setup() {
 
     // Sensors — pass address explicitly
     // begin() now also kicks off the first non-blocking conversion
-    pts_a.begin(0x48);
-    pts_b.begin(0x4A);
+    pts_a.begin(0x4A);
+    pts_b.begin(0x48);
     tcs.begin(0x4B);
 
     lc0.begin();
