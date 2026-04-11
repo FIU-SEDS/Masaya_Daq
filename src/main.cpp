@@ -57,9 +57,9 @@ solenoid solenoids[NUM_SOLENOIDS] = {
 };
 
 // --- Sensors ---
-ptSensors pts_a(PB6, PB7);  // 0x48 - PTs 0-3
-ptSensors pts_b(PB6, PB7);  // 0x4A - PTs 4-7
-tcSensors tcs(PB6, PB7);    // 0x4B - TCs 0-2
+ptSensors pts_a(PB6, PB7);  // PTs 0-3
+ptSensors pts_b(PB6, PB7);  // PTs 4-7
+tcSensors tcs(PB6, PB7);    // TCs 0-2
 loadCell lc0(PC4, PC5);
 loadCell lc1(PB0, PC5);
 

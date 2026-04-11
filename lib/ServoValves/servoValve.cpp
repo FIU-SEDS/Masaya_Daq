@@ -47,8 +47,11 @@ void servoValve::update() {
         _servo.write(_currentDegree);
         _currentDegree--;
 
-        if (_currentDegree < 0) {
+        if (_currentDegree <= 0) {
+            _currentDegree = 0;
             _isMoving = false;
+        } else {
+            _servo.write(_currentDegree--);
         }
     }
 }
