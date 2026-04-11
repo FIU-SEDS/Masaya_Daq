@@ -116,24 +116,15 @@ bool processFrame(uint8_t *frame) {
     uint8_t solId = id - NUM_SERVOS;
     if (solId < NUM_SOLENOIDS) {
         switch (cmd) {
-            case CMD_OPEN:  solenoids[solId].open();  break;
-            case CMD_CLOSE: solenoids[solId].close(); break;
-            default: return false;  // MOD/SLOW invalid for solenoids
+            case CMD_OPEN:  solenoids[solId].open();                     break;
+            case CMD_CLOSE: solenoids[solId].close();
+                            burping = false;                             break;
+            case CMD_LLT:   pressureThreshold = 10.0f;  burping = true; break;
+            case CMD_TLT:   pressureThreshold = 900.0f; burping = true; break;
+            default: return false;
         }
         return true;
     }
-
-    if (solId < NUM_SOLENOIDS) {
-    switch (cmd) {
-        case CMD_OPEN:  solenoids[solId].open();                    break;
-        case CMD_CLOSE: solenoids[solId].close();
-                        burping = false;                            break;  // CMD_CLOSE also kills burp
-        case CMD_LLT:   pressureThreshold = 10.0f;  burping = true; break;
-        case CMD_TLT:   pressureThreshold = 900.0f; burping = true; break;
-        default: return false;
-    }
-    return true;
-}
 
     return false;  // Unknown ID
 }
