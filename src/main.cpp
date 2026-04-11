@@ -22,7 +22,8 @@ HardwareSerial CommSerial(PA10, PA9);
 #define CMD_CLOSE_MOD   0x02
 #define CMD_CLOSE_SLOW  0x03
 #define CMD_CLOSE       0x04
-#define CMD_BURP        0x05
+#define CMD_LLT  0x06   // Start burping at 10 PSI threshold
+#define CMD_TLT  0x07   // Start burping at 900 PSI threshold
 
 // --- Telemetry ---
 #define TELEM_INTERVAL_MS  10
@@ -71,9 +72,16 @@ uint32_t lastTelemTime = 0;
 uint32_t lastBlinkTime = 0;
 
 // --- Burping ---
-bool burping      = false;
-bool burpState    = false;
-uint32_t lastBurpTime = 0;
+bool     burping          = false;
+bool     burpState[NUM_SOLENOIDS] = {false, false};
+uint32_t lastBurpTime[NUM_SOLENOIDS] = {0, 0};
+float    pressureThreshold = 0.0f;
+
+// --- Solenoid → PT channel mapping ---
+// SOL0 (PC6) watches PT channel 1  → pts_a.ch_read(1)
+// SOL1 (PD7) watches PT channel 6  → pts_b.ch_read(2)  (ch6 = pts_b ch2)
+const uint8_t SOL_PT_ADC[NUM_SOLENOIDS] = {0, 1};  // 0=pts_a, 1=pts_b
+const uint8_t SOL_PT_CH[NUM_SOLENOIDS]  = {1, 2};  // channel index within that ADC
 
 bool ledState = false;
 
@@ -117,9 +125,11 @@ bool processFrame(uint8_t *frame) {
 
     if (solId < NUM_SOLENOIDS) {
     switch (cmd) {
-        case CMD_OPEN:  solenoids[solId].open();  break;
-        case CMD_CLOSE: solenoids[solId].close(); break;
-        case CMD_BURP:  burping = !burping;        break;  // toggle burp mode
+        case CMD_OPEN:  solenoids[solId].open();                    break;
+        case CMD_CLOSE: solenoids[solId].close();
+                        burping = false;                            break;  // CMD_CLOSE also kills burp
+        case CMD_LLT:   pressureThreshold = 10.0f;  burping = true; break;
+        case CMD_TLT:   pressureThreshold = 900.0f; burping = true; break;
         default: return false;
     }
     return true;
@@ -216,20 +226,36 @@ void loop() {
         sendTelemetry();
     }
 
-    // Burp: toggle all solenoids every 100ms
+        // Burp: per-solenoid, sensor-gated, 100ms toggle
     if (burping) {
-        if (millis() - lastBurpTime >= 100) {
-            lastBurpTime = millis();
-            burpState = !burpState;
-            for (auto &s : solenoids) {
-                burpState ? s.open() : s.close();
+        // Helper: get the cached PT reading for each solenoid's associated channel
+        float ptReading[NUM_SOLENOIDS];
+        ptReading[0] = pts_a.ch_read(SOL_PT_CH[0]);  // SOL0 → pts_a ch1
+        ptReading[1] = pts_b.ch_read(SOL_PT_CH[1]);  // SOL1 → pts_b ch2 (PT6)
+
+        for (uint8_t i = 0; i < NUM_SOLENOIDS; i++) {
+            if (ptReading[i] > pressureThreshold) {
+                // Pressure is high enough — run the 100ms burp toggle
+                if (millis() - lastBurpTime[i] >= 100) {
+                    lastBurpTime[i] = millis();
+                    burpState[i] = !burpState[i];
+                    burpState[i] ? solenoids[i].open() : solenoids[i].close();
+                }
+            } else {
+                // Pressure too low — keep closed and reset toggle state
+                if (burpState[i]) {
+                    burpState[i] = false;
+                    solenoids[i].close();
+                }
             }
         }
     } else {
-        // Make sure solenoids are closed when burping stops
-        if (burpState) {
-            burpState = false;
-            for (auto &s : solenoids) s.close();
+        // Burp off — ensure everything is closed
+        for (uint8_t i = 0; i < NUM_SOLENOIDS; i++) {
+            if (burpState[i]) {
+                burpState[i] = false;
+                solenoids[i].close();
+            }
         }
     }
 
