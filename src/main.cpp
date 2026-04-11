@@ -198,6 +198,8 @@ void loop() {
     pts_a.poll();
     pts_b.poll();
     tcs.poll();
+    lc0.poll();  
+    lc1.poll(); 
 
     // Update servo positions
     for (auto &s : servos) s.update();
