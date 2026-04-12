@@ -37,10 +37,6 @@ HardwareSerial CommSerial(PA10, PA9);
 #define NUM_SENSORS       (NUM_PT + NUM_TC + NUM_LC + NUM_VALVES_TELEM) // 19
 #define TELEM_LEN         (1 + NUM_SENSORS * 2 + 1)  // 40 bytes
 
-// --- Blink Pin ---
-#define LED_PIN PD13
-
-
 
 // --- Servos ---
 servoValve servos[NUM_SERVOS] = {
@@ -83,7 +79,6 @@ float    pressureThreshold = 0.0f;
 const uint8_t SOL_PT_ADC[NUM_SOLENOIDS] = {0, 1};  // 0=pts_a, 1=pts_b
 const uint8_t SOL_PT_CH[NUM_SOLENOIDS]  = {1, 2};  // channel index within that ADC
 
-bool ledState = false;
 
 // -------------------------------------------------------
 
@@ -169,8 +164,6 @@ void sendTelemetry() {
 void setup() {
     CommSerial.begin(115200);
 
-    pinMode(LED_PIN, OUTPUT);
-
     // I2C bus — init once for all ADS1115 devices
     Wire.setSCL(PB6);
     Wire.setSDA(PB7);
@@ -252,12 +245,4 @@ void loop() {
         }
     }
 
-
-
-    // Periodic LED blink (every 500 ms)
-    if (millis() - lastBlinkTime >= 500) {
-        lastBlinkTime = millis();
-        ledState = !ledState;
-        digitalWrite(LED_PIN, ledState);
-    }
 }
