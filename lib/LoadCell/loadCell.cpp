@@ -8,7 +8,12 @@ loadCell::loadCell(int DOUT, int SCK) {
 
 void loadCell::begin() {
     _loadCell.begin(_DOUT, _SCK);
-    _loadCell.set_scale(-925.74);
+    if(_DOUT == PC4){
+        _loadCell.set_scale(-45228.2617f);
+    } else {
+        _loadCell.set_scale(-45160.8671f);
+    }
+    
     _loadCell.tare();
 }
 
