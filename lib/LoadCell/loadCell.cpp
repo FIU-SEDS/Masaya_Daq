@@ -19,7 +19,8 @@ void loadCell::begin() {
 
 void loadCell::poll() {
     if (_loadCell.is_ready()) {
-        _lastReading = _loadCell.get_units(1);
+        long raw = _loadCell.read();  
+        _lastReading = (raw - _loadCell.get_offset()) / _loadCell.get_scale();
     }
 }
 
