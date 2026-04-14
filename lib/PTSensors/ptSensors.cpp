@@ -9,6 +9,7 @@ ptSensors::ptSensors(int SCL, int SDA) {
 }
 
 void ptSensors::begin(uint8_t addr) {
+    _addr = addr;
     _ptSensors.begin(addr, &Wire);
     _ptSensors.setDataRate(RATE_ADS1115_860SPS);
     startNext();
@@ -29,5 +30,13 @@ void ptSensors::poll() {
 }
 
 float ptSensors::ch_read(uint8_t chNum) {
-    return ((_ptSensors.computeVolts(_results[chNum]) - 0.5) / 4.0) * 1500.0;
+    float volts = _ptSensors.computeVolts(_results[chNum]);
+
+    // pts_a (0x4A): ch0 and ch1 → 3000 PSI range
+    // pts_b (0x48): ch2 and ch3 → 3000 PSI range
+    if ((_addr == 0x4A && chNum <= 1) || (_addr == 0x48 && chNum >= 2)) {
+        return ((volts - 0.5) / 4.0) * 3000.0;
+    }
+
+    return ((volts - 0.5) / 4.0) * 1500.0;
 }

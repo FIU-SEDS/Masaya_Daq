@@ -8,6 +8,7 @@ class ptSensors {
   private:
     int _SCL;
     int _SDA;
+    uint8_t _addr; 
     Adafruit_ADS1115 _ptSensors;
 
     int16_t  _results[4];
