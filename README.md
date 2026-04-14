@@ -176,12 +176,9 @@ Masaya-DAQ/
 │   ├── tcSensors/
 │   │   ├── tcSensors.h
 │   │   └── tcSensors.cpp   # ADS1115 non-blocking poller, TC conversion
-│   ├── loadCell/
-│   │   ├── loadCell.h
-│   │   └── loadCell.cpp    # HX711 non-blocking poller
-│   └── CD4051BE/
-│       ├── CD4051BE.h
-│       └── CD4051BE.cpp    # 8-ch analog mux driver (reserved, unused)
+│   └── loadCell/
+│       ├── loadCell.h
+│       └── loadCell.cpp    # HX711 non-blocking poller
 └── platformio.ini
 ```
 
@@ -241,10 +238,3 @@ The CH9121 must be pre-configured (via its own configuration utility) to match t
 | Mode | UDP |
 
 ---
-
-## Known Limitations
-
-- Negative sensor values (load cell tare drift, sub-ambient thermocouple readings) are clipped to 0 in the uint16 fixed-point encoding and will appear as 0.0 on the ground station
-- `burping = false` on `CMD_CLOSE` is global — closing either solenoid stops burping on both
-- The serial RX parser has no sync byte; a partial frame received on startup or reconnect will be misaligned until the checksum rejects it and the next valid frame re-syncs
-- `tare()` in `loadCell::begin()` blocks for approximately 10 samples at 80Hz (~125ms per cell) during `setup()` — this is acceptable as it only runs once at boot
