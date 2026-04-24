@@ -40,10 +40,10 @@ HardwareSerial CommSerial(PA10, PA9);
 
 // --- Servos ---
 servoValve servos[NUM_SERVOS] = {
-    servoValve(PA5),
-    servoValve(PA1),
-    servoValve(PA4),
-    servoValve(PA3)
+    servoValve(PA5), // 180 Degree Servo
+    servoValve(PA1), // 270 Degree Servo
+    servoValve(PA4), // 270 Degree Servo
+    servoValve(PA3) // 180 Degree Servo
 };
 
 // --- Solenoids ---

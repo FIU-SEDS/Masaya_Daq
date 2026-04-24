@@ -9,7 +9,7 @@ class servoValve {
     int _servoPin;
     Servo _servo;
 
-    int _currentDegree;
+    float _currentDegree;
     unsigned long _lastMoveTime;
     bool _isMoving;
     int _stepDelay;
@@ -21,9 +21,9 @@ class servoValve {
     void open();
     void closeSlow();  
     void closeModerate();
-    void update();                       
+    void update();
     bool isMoving();
-    int getPosition();                     
+    float getPosition();
 };
 
 #endif
