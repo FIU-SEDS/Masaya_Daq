@@ -12,6 +12,10 @@ servoValve::servoValve(int servoPin) {
         _currentDegree = 9;
     } else if (_servoPin == PA4) {
         _currentDegree = 2.5;
+    } else if (_servoPin == PA5) {
+        _currentDegree = 3;
+    } else if (_servoPin == PA3) {
+        _currentDegree = 7;
     } else {
         _currentDegree = 0;
     }
@@ -30,6 +34,12 @@ void servoValve::close() {
     } else if (_servoPin == PA4) {
         _currentDegree = 2.5;
         _servo.write(2.5);
+    } else if (_servoPin == PA5) {
+        _currentDegree = 3;
+        _servo.write(3);
+    } else if (_servoPin == PA3) {
+        _currentDegree = 7;
+        _servo.write(7);
     } else {
         _currentDegree = 0;
         _servo.write(0);
@@ -44,6 +54,12 @@ void servoValve::open() {
     } else if (_servoPin == PA4) {
         _currentDegree = 67.5;
         _servo.write(67.5);
+    } else if (_servoPin == PA5) {
+        _currentDegree = 98;
+        _servo.write(98);
+    } else if (_servoPin == PA3) {
+        _currentDegree = 100;
+        _servo.write(100);
     } else {
         _currentDegree = 90;
         _servo.write(90);
@@ -78,6 +94,10 @@ void servoValve::update() {
             closeTarget = 9;
         } else if (_servoPin == PA4) {
             closeTarget = 2.5;
+        } else if (_servoPin == PA5) {
+            closeTarget = 3;
+        } else if (_servoPin == PA3) {
+            closeTarget = 7;
         } else {
             closeTarget = 0;
         }
