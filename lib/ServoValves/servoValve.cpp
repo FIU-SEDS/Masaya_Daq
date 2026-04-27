@@ -120,5 +120,9 @@ bool servoValve::isMoving() {
 }
 
 float servoValve::getPosition() {
-    return _currentDegree;
+    if(_currentDegree < 10){
+        return 0.0f;
+    } else {
+        return 90.0f;
+    }
 }
