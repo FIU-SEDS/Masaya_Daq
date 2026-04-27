@@ -131,16 +131,18 @@ void sendTelemetry() {
     };
 
     // Read all PT channels (blocking, ~1.2ms each at 860 SPS)
-    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_a.ch_read(ch));
-    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_b.ch_read(ch));
-
     for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_a.ch_read(ch));
+    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(0);
+
+
+
     for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_b.ch_read(ch));
+    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(0);
 
 
     // Read all TC channels (blocking)
-    // for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(tcs.ch_read(ch));
     for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(tcs.ch_read(ch));
+    // for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(0);
 
 
     // Load cells (only blocks briefly when sample is ready)
