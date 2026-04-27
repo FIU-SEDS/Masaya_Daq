@@ -13,8 +13,7 @@ class loadCell {
   public:
     loadCell(int DOUT, int SCK);
     void begin();
-    void poll();        // Call every loop() iteration
-    float lc_read();    // Returns last cached value, non-blocking
+    float lc_read();
 };
 
 #endif

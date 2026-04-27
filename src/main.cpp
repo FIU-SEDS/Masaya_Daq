@@ -22,42 +22,42 @@ HardwareSerial CommSerial(PA10, PA9);
 #define CMD_CLOSE_MOD   0x02
 #define CMD_CLOSE_SLOW  0x03
 #define CMD_CLOSE       0x04
-#define CMD_LLT  0x06   // Start burping at 10 PSI threshold
-#define CMD_TLT  0x07   // Start burping at 900 PSI threshold
+#define CMD_LLT         0x06   // Localized leak test (10 PSI threshold)
+#define CMD_TLT         0x07   // Total leak test (900 PSI threshold)
 
 // --- Telemetry ---
-#define TELEM_INTERVAL_MS  10
-#define NUM_PT             8    // 2x ADS1115, 4ch each
-#define NUM_TC             3    // 1x ADS1115, 3ch used
-#define NUM_LC             2    // 2x HX711
-#define NUM_VALVES_TELEM   6    // 4 Servos and 2 solenoids
-// TX frame: [0xFF] [13x floats as 2-byte fixed point] [CHECKSUM] = 28 bytes
-// Each sensor encoded as uint16_t (value * 10 for 1 decimal place)
-#define TELEM_HEADER    0xFF
-#define NUM_SENSORS       (NUM_PT + NUM_TC + NUM_LC + NUM_VALVES_TELEM) // 19
-#define TELEM_LEN         (1 + NUM_SENSORS * 2 + 1)  // 40 bytes
-
+// At ~50ms we have plenty of headroom for blocking ADC reads.
+// Each ADS1115 read at 860 SPS = ~1.2ms. 11 reads = ~14ms total.
+// Plus HX711 occasional ~1ms reads. Comfortable margin.
+#define TELEM_INTERVAL_MS  50
+#define NUM_PT             8
+#define NUM_TC             3
+#define NUM_LC             2
+#define NUM_VALVES_TELEM   6
+#define TELEM_HEADER       0xFF
+#define NUM_SENSORS        (NUM_PT + NUM_TC + NUM_LC + NUM_VALVES_TELEM)
+#define TELEM_LEN          (1 + NUM_SENSORS * 2 + 1)
 
 // --- Servos ---
 servoValve servos[NUM_SERVOS] = {
-    servoValve(PA5), // 180 Degree Servo 0 = 3 Degrees, 90 = 98 Degrees
-    servoValve(PA1), // 270 Degree Servo 0 = 9 Degrees, 90 = 74 Degrees
-    servoValve(PA4), // 270 Degree Servo 0 = 2.5 Degrees, 90 = 67.5 Degrees
-    servoValve(PA3) // 180 Degree Servo 0 = 7, 90 = 100 Degrees
+    servoValve(PA5), // SEV-01F  180° servo, closed=3, open=98
+    servoValve(PA1), // SEV-02F  270° servo, closed=9, open=74
+    servoValve(PA4), // SEV-03OX 270° servo, closed=2.5, open=67.5
+    servoValve(PA3)  // SEV-04OX 180° servo, closed=7, open=100
 };
 
 // --- Solenoids ---
 solenoid solenoids[NUM_SOLENOIDS] = {
-    solenoid(PC6),
-    solenoid(PD7),
+    solenoid(PC6),   // SOV-01F
+    solenoid(PD7),   // SOV-02OX
 };
 
 // --- Sensors ---
-ptSensors pts_a(PB6, PB7);  // PTs 0-3
-ptSensors pts_b(PB6, PB7);  // PTs 4-7
-tcSensors tcs(PB6, PB7);    // TCs 0-2
-loadCell lc0(PC4, PC5);
-loadCell lc1(PB0, PC5);
+ptSensors pts_a(PB6, PB7);  // PTs 0-3 @ 0x4A
+ptSensors pts_b(PB6, PB7);  // PTs 4-7 @ 0x48
+tcSensors tcs(PB6, PB7);    // TCs 0-2 @ 0x4B
+loadCell  lc0(PC4, PC5);
+loadCell  lc1(PB0, PC5);
 
 // --- RX Buffer ---
 uint8_t rxBuf[FRAME_LEN];
@@ -65,20 +65,16 @@ uint8_t rxIdx = 0;
 
 // --- Timers ---
 uint32_t lastTelemTime = 0;
-uint32_t lastBlinkTime = 0;
 
 // --- Burping ---
-bool     burping          = false;
+bool     burping            = false;
 bool     burpState[NUM_SOLENOIDS] = {false, false};
 uint32_t lastBurpTime[NUM_SOLENOIDS] = {0, 0};
-float    pressureThreshold = 0.0f;
+float    pressureThreshold  = 0.0f;
 
-// --- Solenoid → PT channel mapping ---
-// SOL0 (PC6) watches PT channel 1  → pts_a.ch_read(1)
-// SOL1 (PD7) watches PT channel 6  → pts_b.ch_read(2)  (ch6 = pts_b ch2)
-const uint8_t SOL_PT_ADC[NUM_SOLENOIDS] = {0, 1};  // 0=pts_a, 1=pts_b
-const uint8_t SOL_PT_CH[NUM_SOLENOIDS]  = {1, 2};  // channel index within that ADC
-
+// SOL0 → pts_a ch1, SOL1 → pts_b ch2 (PT6)
+const uint8_t SOL_PT_ADC[NUM_SOLENOIDS] = {0, 1};
+const uint8_t SOL_PT_CH[NUM_SOLENOIDS]  = {1, 2};
 
 // -------------------------------------------------------
 
@@ -95,7 +91,6 @@ bool processFrame(uint8_t *frame) {
     uint8_t id  = frame[0];
     uint8_t cmd = frame[1];
 
-    // Servo valve (IDs 0–3)
     if (id < NUM_SERVOS) {
         switch (cmd) {
             case CMD_OPEN:       servos[id].open();          break;
@@ -107,21 +102,20 @@ bool processFrame(uint8_t *frame) {
         return true;
     }
 
-    // Solenoid (IDs 4–5)
     uint8_t solId = id - NUM_SERVOS;
     if (solId < NUM_SOLENOIDS) {
         switch (cmd) {
-            case CMD_OPEN:  solenoids[solId].open();                     break;
+            case CMD_OPEN:  solenoids[solId].open();                      break;
             case CMD_CLOSE: solenoids[solId].close();
-                            burping = false;                             break;
-            case CMD_LLT:   pressureThreshold = 10.0f;  burping = true; break;
-            case CMD_TLT:   pressureThreshold = 900.0f; burping = true; break;
+                            burping = false;                              break;
+            case CMD_LLT:   pressureThreshold = 10.0f;  burping = true;   break;
+            case CMD_TLT:   pressureThreshold = 900.0f; burping = true;   break;
             default: return false;
         }
         return true;
     }
 
-    return false;  // Unknown ID
+    return false;
 }
 
 void sendTelemetry() {
@@ -130,48 +124,47 @@ void sendTelemetry() {
 
     frame[idx++] = TELEM_HEADER;
 
-    // Helper: encode float as uint16_t (×10, 1 decimal place, 0–6553.5 range)
     auto encodeFloat = [&](float val) {
         uint16_t encoded = (uint16_t)constrain(val * 10.0f, 0, 65535);
         frame[idx++] = (encoded >> 8) & 0xFF;
         frame[idx++] = encoded & 0xFF;
     };
 
-    // PTs (8 channels) — returns last cached value, no blocking
+    // Read all PT channels (blocking, ~1.2ms each at 860 SPS)
+    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_a.ch_read(ch));
+    // for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_b.ch_read(ch));
+
     for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_a.ch_read(ch));
     for (uint8_t ch = 0; ch < 4; ch++) encodeFloat(pts_b.ch_read(ch));
 
-    // TCs (3 channels) — returns last cached value, no blocking
+
+    // Read all TC channels (blocking)
+    // for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(tcs.ch_read(ch));
     for (uint8_t ch = 0; ch < 3; ch++) encodeFloat(tcs.ch_read(ch));
 
-    // Load cells (2)
+
+    // Load cells (only blocks briefly when sample is ready)
     encodeFloat(lc0.lc_read());
     encodeFloat(lc1.lc_read());
 
-
-    // Servo Position
+    // Servo positions
     for (uint8_t i = 0; i < NUM_SERVOS; i++) encodeFloat(servos[i].getPosition());
-    
-    // Solenoid Position
+
+    // Solenoid positions
     for (uint8_t i = 0; i < NUM_SOLENOIDS; i++) encodeFloat(solenoids[i].getPosition());
 
-    // Checksum over everything except the last byte slot
     frame[idx] = calcChecksum(frame, idx);
-
     CommSerial.write(frame, TELEM_LEN);
 }
 
 void setup() {
     CommSerial.begin(115200);
 
-    // I2C bus — init once for all ADS1115 devices
     Wire.setSCL(PB6);
     Wire.setSDA(PB7);
-    Wire.setClock(400000);
+    Wire.setClock(100000);   // Drop to 100kHz — more reliable with multiple devices
     Wire.begin();
 
-    // Sensors — pass address explicitly
-    // begin() now also kicks off the first non-blocking conversion
     pts_a.begin(0x4A);
     pts_b.begin(0x48);
     tcs.begin(0x4B);
@@ -179,22 +172,12 @@ void setup() {
     lc0.begin();
     lc1.begin();
 
-    // Servos & solenoids
     for (auto &s : servos)    s.begin();
     for (auto &s : solenoids) s.begin();
 }
 
 void loop() {
-    // Poll all ADCs every iteration — completely non-blocking.
-    // Each call checks if the current channel is done, stores the result,
-    // and immediately kicks off the next channel conversion.
-    pts_a.poll();
-    pts_b.poll();
-    tcs.poll();
-    lc0.poll();  
-    lc1.poll(); 
-
-    // Update servo positions
+    // Servo position updates (for slow-close moves)
     for (auto &s : servos) s.update();
 
     // Non-blocking serial receive
@@ -206,29 +189,28 @@ void loop() {
         }
     }
 
-    // Periodic telemetry — ch_read() now just returns cached values, no waiting
+    // Periodic telemetry (blocking ADC reads happen here)
     if (millis() - lastTelemTime >= TELEM_INTERVAL_MS) {
         lastTelemTime = millis();
         sendTelemetry();
     }
 
-        // Burp: per-solenoid, sensor-gated, 100ms toggle
+    // Burp control: per-solenoid, sensor-gated, 100ms toggle
     if (burping) {
-        // Helper: get the cached PT reading for each solenoid's associated channel
+        // NOTE: This reads sensors AGAIN — adds another ~2.4ms blocking.
+        // If this causes issues, cache the last telemetry reading and use that.
         float ptReading[NUM_SOLENOIDS];
-        ptReading[0] = pts_a.ch_read(SOL_PT_CH[0]);  // SOL0 → pts_a ch1
-        ptReading[1] = pts_b.ch_read(SOL_PT_CH[1]);  // SOL1 → pts_b ch2 (PT6)
+        ptReading[0] = pts_a.ch_read(SOL_PT_CH[0]);
+        ptReading[1] = pts_b.ch_read(SOL_PT_CH[1]);
 
         for (uint8_t i = 0; i < NUM_SOLENOIDS; i++) {
             if (ptReading[i] > pressureThreshold) {
-                // Pressure is high enough — run the 100ms burp toggle
                 if (millis() - lastBurpTime[i] >= 100) {
                     lastBurpTime[i] = millis();
                     burpState[i] = !burpState[i];
                     burpState[i] ? solenoids[i].open() : solenoids[i].close();
                 }
             } else {
-                // Pressure too low — keep closed and reset toggle state
                 if (burpState[i]) {
                     burpState[i] = false;
                     solenoids[i].close();
@@ -236,7 +218,6 @@ void loop() {
             }
         }
     } else {
-        // Burp off — ensure everything is closed
         for (uint8_t i = 0; i < NUM_SOLENOIDS; i++) {
             if (burpState[i]) {
                 burpState[i] = false;
@@ -244,5 +225,4 @@ void loop() {
             }
         }
     }
-
 }
